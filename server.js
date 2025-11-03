@@ -1,42 +1,47 @@
-const express = require('express');
-const axios = require('axios');
-const path = require('path');
+const express = require("express");
+const cors = require("cors");
+const axios = require("axios");
+
 const app = express();
-const port = 3000;
+const PORT = 3000;
 
-const API_KEY = 'sk_tzIuIbEx726kD8uL';
+app.use(cors());
+app.use(express.json());
 
-app.use(express.static(__dirname));
+// ==============================
+// Short.io Config
+// ==============================
+const API_KEY = "sk_4YZggpPrPO6FwLIW"; // 🔑 তোমার Secret API Key
+const DOMAIN_ID = "1538613";                // 🔹 Domain ID
 
-app.get('/api/stats', async (req, res) => {
-  const { linkId } = req.query;
-  if (!linkId) return res.status(400).json({ error: 'Missing linkId' });
+// Root route
+app.get("/", (req, res) => {
+  res.send("🚀 Short.io Live Click Tracker API is running!");
+});
+
+// Click stats API
+app.get("/api/clicks", async (req, res) => {
+  const linkId = req.query.linkId;
+  if (!linkId) return res.status(400).json({ error: "Missing linkId parameter" });
 
   try {
-    const response = await axios.get(`https://api-v2.short.io/statistics/link/${linkId}`, {
-      params: { period: 'total' },
-      headers: { accept: '*/*', authorization: API_KEY }
-    });
+    const response = await axios.get(
+      `https://api-v2.short.io/statistics/domain/${DOMAIN_ID}/link_clicks`,
+      {
+        params: { ids: linkId },
+        headers: {
+          accept: "*/*",
+          authorization: API_KEY
+        }
+      }
+    );
 
-    const data = response.data;
-    const humanClicks = data.humanClicks || 0;
-
-    let countries = [];
-    if (data.country) {
-      countries = data.country.map(c => ({ ...c, score: c.humanScore || c.score }));
-    }
-
-    res.json({ humanClicks, countries });
+    res.json(response.data);
 
   } catch (err) {
-    res.status(500).json({ error: err.response?.data || err.message });
+    console.error("❌ Error fetching clicks:", err.response ? err.response.data : err.message);
+    res.status(500).json({ error: err.response ? err.response.data : err.message });
   }
 });
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-app.listen(port, () => {
-  console.log(`✅ Server running at http://localhost:${port}`);
-});
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
